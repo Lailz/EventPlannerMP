@@ -15,14 +15,21 @@ exports.eventCreate = async (req, res) => {
 
 exports.eventList = async (req, res) => {
   try {
-    const events = await Event.findAll({
-      order: ["startDate", "name"],
-      where: {
-        startDate: {
-          [Op.gt]: req.body.date ?? 0,
+    let events;
+    if (req.body.date) {
+      events = await Event.findAll({
+        order: ["startDate", "name"],
+        where: {
+          startDate: {
+            [Op.gt]: req.body.date,
+          },
         },
-      },
-    });
+      });
+    } else {
+      events = await Event.findAll({
+        order: ["startDate", "name"],
+      });
+    }
     res.json(events);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -63,6 +70,45 @@ exports.eventDelete = async (req, res) => {
       await queryInterface.bulkDelete("Events", { id: { [Op.in]: req.body } });
       res.status(204).end();
     }
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.eventListFullyBooked = async (req, res) => {
+  try {
+    const events = await Event.findAll({
+      where: {
+        numOfSeats: {
+          [Op.eq]: { [Op.col]: "bookedSeats" }, // Go to section Operators https://sequelize.org/master/manual/model-querying-basics.html
+        },
+      },
+    });
+    res.json(events);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.eventListFiltered = async (req, res) => {
+  try {
+    const events = await Event.findAll({
+      where: {
+        name: {
+          [Op.substring]: req.body.query,
+        },
+      },
+    });
+    res.json(events);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.eventListPaginated = async (req, res) => {
+  try {
+    const events = await Event.findAll(req.body);
+    res.json(events);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
